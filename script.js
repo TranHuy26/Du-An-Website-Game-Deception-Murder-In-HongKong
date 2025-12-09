@@ -146,12 +146,23 @@ function renderUI() {
         renderRoleInfo(me);
         renderForensicBoard(localState.forensic, me.role.id === 'FORENSIC');
         renderGameBoard(pList, me);
+        
+        // Tự động kết nối voice chat khi game bắt đầu
         const voiceConfig = localState.config?.voiceEnabled;
         if (voiceConfig && !window.hasJoinedVoice) {
-            window.hasJoinedVoice = true; 
-            // Gọi hàm từ file voice.js
-            initVoiceChat(ROOM_ID, myId); 
+            // Set flag để tránh gọi nhiều lần
+            window.hasJoinedVoice = true;
+            
+            // Tự động kết nối voice chat (mic tắt mặc định)
+            console.log("🎮 Game bắt đầu - Đang kết nối Voice Chat...");
+            initVoiceChat(ROOM_ID, myId).then(() => {
+                console.log("✅ Voice Chat đã sẵn sàng! Bấm nút Mic để nói.");
+            }).catch(err => {
+                console.error("❌ Lỗi kết nối Voice Chat:", err);
+                window.hasJoinedVoice = false; // Reset flag nếu lỗi
+            });
         }
+        
         handleGamePhase(phase, me);
     }
 }

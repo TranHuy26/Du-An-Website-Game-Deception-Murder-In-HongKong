@@ -16,6 +16,48 @@ const checkAgora = () => {
     return true;
 };
 
+// Helper object để set room info từ bên ngoài
+window.voiceChat = {
+    setRoomInfo: (roomId, uid) => {
+        currentRoomId = roomId;
+        currentUid = uid;
+        console.log("Voice Chat: Room info set", { roomId, uid });
+    }
+};
+
+// Kiểm tra quyền microphone
+async function checkMicrophonePermission() {
+    try {
+        // Kiểm tra xem trình duyệt có hỗ trợ API permissions không
+        if (navigator.permissions && navigator.permissions.query) {
+            const result = await navigator.permissions.query({ name: 'microphone' });
+            console.log("Microphone permission:", result.state);
+            return result.state; // 'granted', 'denied', hoặc 'prompt'
+        }
+        return 'unknown';
+    } catch (error) {
+        console.warn("Không thể kiểm tra quyền microphone:", error);
+        return 'unknown';
+    }
+}
+
+// Kiểm tra xem mic có đang bị chiếm dụng không
+async function checkMicrophoneAvailability() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        
+        if (audioInputs.length === 0) {
+            return { available: false, reason: 'NO_DEVICE' };
+        }
+        
+        return { available: true };
+    } catch (error) {
+        console.error("Lỗi kiểm tra thiết bị:", error);
+        return { available: false, reason: 'CHECK_FAILED' };
+    }
+}
+
 // --- HÀM MỚI: QUẢN LÝ KẾT NỐI TỔNG ---
 window.toggleVoiceConnection = async () => {
     const powerBtn = document.getElementById('btn-power');
@@ -37,11 +79,34 @@ window.toggleVoiceConnection = async () => {
             return;
         }
         
+        // Kiểm tra thiết bị microphone trước
+        const micCheck = await checkMicrophoneAvailability();
+        if (!micCheck.available) {
+            if (micCheck.reason === 'NO_DEVICE') {
+                alert("🎤 Không tìm thấy Microphone!\n\nHãy kết nối microphone và thử lại.");
+            } else {
+                alert("⚠️ Không thể kiểm tra Microphone.\n\nHãy kiểm tra cài đặt thiết bị của bạn.");
+            }
+            return;
+        }
+        
+        // Kiểm tra quyền truy cập
+        const permission = await checkMicrophonePermission();
+        if (permission === 'denied') {
+            alert("❌ Quyền truy cập Microphone bị từ chối!\n\n" +
+                  "Hãy:\n" +
+                  "1. Bấm vào icon 🔒 trên thanh địa chỉ\n" +
+                  "2. Cho phép truy cập Microphone\n" +
+                  "3. Tải lại trang");
+            return;
+        }
+        
         if(powerBtn) powerBtn.innerHTML = '⌛'; // Loading...
         
         await initVoiceChat(currentRoomId, currentUid);
         
-        if(powerBtn) {
+        // Chỉ cập nhật nút thành công nếu thực sự kết nối được
+        if (client && client.connectionState === 'CONNECTED' && powerBtn) {
             powerBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
             powerBtn.classList.add('bg-red-600', 'hover:bg-red-500');
             powerBtn.innerHTML = '☎️'; // Icon dập máy
@@ -57,7 +122,7 @@ export async function initVoiceChat(roomId, uid) {
     currentRoomId = roomId;
     currentUid = uid;
 
-    // Hiển thị khung Voice Control (nhưng chưa hiện nút Mic/Loa vội)
+    // Hiển thị khung Voice Control (chỉ trong game)
     const controlPanel = document.getElementById('voice-controls');
     if (controlPanel) controlPanel.classList.remove('hidden');
 
@@ -99,14 +164,54 @@ export async function initVoiceChat(roomId, uid) {
         startVolumeIndicator();
 
     } catch (error) {
-        console.error("Lỗi kết nối Voice:", error);
-        alert("Lỗi kết nối Voice Chat (Kiểm tra Mic của bạn).");
+        console.error("Lỗi kết nối Voice Chi Tiết:", error);
+        
+        // Phân tích lỗi cụ thể
+        let errorMsg = "Lỗi kết nối Voice Chat!\n\n";
+        
+        if (error.code === 'PERMISSION_DENIED' || error.name === 'NotAllowedError') {
+            errorMsg += "❌ Bạn chưa cấp quyền truy cập Microphone.\n\n";
+            errorMsg += "Hãy:\n";
+            errorMsg += "1. Bấm vào icon 🔒 hoặc ⓘ trên thanh địa chỉ\n";
+            errorMsg += "2. Cho phép truy cập Microphone\n";
+            errorMsg += "3. Tải lại trang";
+        } else if (error.code === 'NOT_READABLE' || error.name === 'NotReadableError') {
+            errorMsg += "⚠️ Microphone đang bị chiếm dụng bởi ứng dụng khác!\n\n";
+            errorMsg += "Hãy:\n";
+            errorMsg += "1. Đóng các ứng dụng khác đang dùng mic (Zoom, Teams, Discord...)\n";
+            errorMsg += "2. Hoặc đóng các tab Chrome khác đang dùng mic\n";
+            errorMsg += "3. Thử lại";
+        } else if (error.code === 'NOT_FOUND' || error.name === 'NotFoundError') {
+            errorMsg += "🎤 Không tìm thấy Microphone!\n\n";
+            errorMsg += "Hãy kiểm tra:\n";
+            errorMsg += "1. Microphone đã được kết nối chưa?\n";
+            errorMsg += "2. Driver microphone đã cài đặt chưa?";
+        } else {
+            errorMsg += `Lỗi: ${error.message || error.code || 'Không xác định'}\n\n`;
+            errorMsg += "Hãy thử:\n";
+            errorMsg += "1. Tải lại trang\n";
+            errorMsg += "2. Kiểm tra kết nối Internet\n";
+            errorMsg += "3. Kiểm tra Microphone";
+        }
+        
+        alert(errorMsg);
+        
         // Reset nút nguồn về trạng thái chưa kết nối nếu lỗi
         const powerBtn = document.getElementById('btn-power');
         if(powerBtn) {
             powerBtn.innerHTML = '📞';
             powerBtn.classList.add('bg-green-600');
             powerBtn.classList.remove('bg-red-600');
+        }
+        
+        // Cleanup nếu có
+        if (client) {
+            await client.leave().catch(() => {});
+            client = null;
+        }
+        if (localAudioTrack) {
+            localAudioTrack.close();
+            localAudioTrack = null;
         }
     }
 }
@@ -125,6 +230,10 @@ export async function leaveVoiceChat() {
     // Ẩn các nút Mic/Loa, chỉ giữ nút Nguồn
     const actionsDiv = document.getElementById('voice-actions');
     if (actionsDiv) actionsDiv.classList.add('hidden');
+    
+    // Ẩn luôn cả khung voice controls
+    const controlPanel = document.getElementById('voice-controls');
+    if (controlPanel) controlPanel.classList.add('hidden');
     
     console.log("Voice Chat: Disconnected");
 }

@@ -22,7 +22,10 @@ export function createNguoiChoiAPI({ getState, myIdRef, roomRef, update, ref, ge
             };
             // Sử dụng set để khởi tạo toàn bộ cấu trúc phòng thay vì update
             set(roomRef, updates).then(() => {
-                if (initVoiceChat) initVoiceChat(roomId, uid);
+                // Lưu thông tin phòng để voice chat có thể dùng khi game bắt đầu
+                if (window.voiceChat) {
+                    window.voiceChat.setRoomInfo(roomId, uid);
+                }
             });
         } else {
             // TRƯỜNG HỢP 2: THAM GIA PHÒNG ĐÃ CÓ (Dành cho Người chơi)
@@ -44,7 +47,10 @@ export function createNguoiChoiAPI({ getState, myIdRef, roomRef, update, ref, ge
             updates[`players/${uid}`] = { id: uid, name, isHost: false };
             
             update(roomRef, updates).then(() => {
-                if (initVoiceChat) initVoiceChat(roomId, uid);
+                // Lưu thông tin phòng để voice chat có thể dùng khi game bắt đầu
+                if (window.voiceChat) {
+                    window.voiceChat.setRoomInfo(roomId, uid);
+                }
             });
         }
     }).catch(err => {
@@ -100,6 +106,7 @@ export function createNguoiChoiAPI({ getState, myIdRef, roomRef, update, ref, ge
 
     const returnToLobby = () => {
         const state = getState();
+        // Ngắt kết nối voice chat khi quay về lobby
         leaveVoiceChat();
         if (!state?.players) return;
         const uid = myIdRef();
@@ -108,6 +115,8 @@ export function createNguoiChoiAPI({ getState, myIdRef, roomRef, update, ref, ge
             [`players/${uid}`]: null
         };
         update(roomRef, updates);
+        // Reload trang để quay về màn hình đăng nhập
+        location.reload();
     };
 
     return {
