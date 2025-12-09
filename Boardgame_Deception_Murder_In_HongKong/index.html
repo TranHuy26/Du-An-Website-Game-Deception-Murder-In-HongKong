@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deception: Murder in Hong Kong (Ultimate)</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.2.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: { 900: '#121212', 800: '#1e1e1e', 750: '#2d2d2d' },
+                        brand: { red: '#e53e3e', blue: '#4299e1', gold: '#ecc94b', purple: '#9f7aea' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .chat-scroll { overscroll-behavior: contain; }
+        #chat-messages { 
+            overscroll-behavior: contain; 
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
+            scroll-behavior: smooth;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen pb-24 overflow-x-hidden">
+
+    <header class="text-center py-4 bg-gray-900/95 sticky top-0 z-40 border-b border-gray-800 backdrop-blur">
+        <h1 class="text-2xl font-extrabold text-brand-red tracking-widest uppercase">DECEPTION</h1>
+        <div id="game-status-bar" class="text-sm text-gray-400 mt-1">Ultimate Web Version</div>
+    </header>
+
+    <main class="container mx-auto px-2 py-4">
+        <section id="login-screen" class="mt-6">
+            <div class="relative overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-900 to-black shadow-2xl">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(66,153,225,0.08),transparent_25%),radial-gradient(circle_at_80%_0%,rgba(229,62,62,0.08),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(236,201,75,0.08),transparent_22%)]"></div>
+                <div class="relative p-8 lg:p-12 space-y-8">
+                    <div class="space-y-3">
+                        <p class="text-sm uppercase tracking-[0.3em] text-brand-blue font-semibold">Web Version</p>
+                        <h1 class="text-3xl sm:text-4xl lg:text-4xl xl:text-5xl font-extrabold leading-relaxed xl:leading-tight text-transparent bg-clip-text bg-gradient-to-r from-brand-red via-brand-gold to-brand-blue drop-shadow-lg pb-3 whitespace-normal xl:whitespace-nowrap">
+                            Deception: Murder in Hong Kong
+                        </h1>
+                        <p class="text-gray-300 text-lg max-w-4xl">
+                            Giữa chốn phồn hoa đô hội, một thảm kịch vừa giáng xuống, tuy nhiên 
+                            Hung Thủ không ở đâu xa, hắn đang ẩn mình ngay trong hàng ngũ những kẻ thực thi công lý.
+                            Pháp Y nắm giữ thiên cơ nhưng buộc phải tuyệt khẩu, Sát Nhân tinh vi dùng lời lẽ để thao túng nhân tâm,
+                            thời gian như ngọn nến trước gió. Sự tin tưởng là thứ xa xỉ nhất, hãy cẩn trọng, vì kẻ đang kề vai sát cánh cùng bạn... có thể chính là kẻ đang cầm dao.
+                            Một cuộc đấu trí cân não, một ván cược sinh tử. Bạn đủ tỉnh táo để vạch trần cái ác, hay sẽ trở thành con rối trong tay kẻ thủ ác?"
+                        </p>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-8 items-start">
+                        <div class="bg-gray-800/80 border border-gray-700/80 rounded-2xl p-6 shadow-2xl backdrop-blur">
+                            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                                <span class="text-brand-red">Đăng nhập & Tham gia</span>
+                                <span class="text-sm text-gray-400">| Vào phòng ngay</span>
+                            </h2>
+                            <div class="space-y-3">
+                                <input type="text" id="username-input" placeholder="Tên của bạn..." class="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white focus:border-brand-red focus:ring-1 focus:ring-brand-red outline-none">
+                                <button onclick="joinLobby()" class="w-full bg-brand-red hover:bg-red-600 font-bold py-3 rounded-lg transition text-white shadow-lg shadow-brand-red/30">
+                                    🚪 Tham Gia Vụ Án
+                                </button>
+                            </div>
+                            <div class="mt-5 grid grid-cols-2 gap-2 text-xs text-gray-400">
+                                <div class="flex items-center gap-2"><span class="text-brand-blue">🛡️</span> 6-18 người</div>
+                                <div class="flex items-center gap-2"><span class="text-brand-gold">🎭</span> Nhiều vai đặc biệt</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="lobby-screen" class="max-w-4xl mx-auto hidden">
+            <div class="text-center mb-6">
+                <h2 class="text-lg text-gray-400">Phòng chờ</h2>
+                <p class="text-brand-blue font-bold text-3xl mb-2" id="current-player-name">...</p>
+                <div id="player-count-badge" class="inline-block px-3 py-1 rounded bg-gray-700 text-sm font-bold border border-gray-600">
+                    Đang tải...
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-gray-400 font-bold uppercase text-xs mb-3 tracking-wider">Danh sách tham gia</h3>
+                    <ul id="player-list" class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar"></ul>
+                </div>
+
+                <div class="flex flex-col h-full gap-4 min-h-[400px]">
+                    <div id="host-controls" class="hidden bg-gray-800 p-5 rounded-xl border border-gray-700 shrink-0">
+                        <h3 class="text-brand-gold font-bold uppercase text-sm mb-4 border-b border-gray-700 pb-2">⚙️ Cấu hình vai trò</h3>
+                        
+                        <div class="space-y-4 text-sm">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-gray-900/50 p-2 rounded flex justify-between"><span class="text-brand-red font-bold">Sát Nhân</span><span class="text-gray-500">1</span></div>
+                                <div class="bg-gray-900/50 p-2 rounded flex justify-between"><span class="text-white font-bold">Nhân Chứng</span><span class="text-gray-500">1</span></div>
+                            </div>  
+                            <div class="flex justify-between items-center bg-gray-700/30 p-2 rounded">
+                                <span class="text-brand-red">Tòng Phạm (1-5)</span>
+                                <input type="number" id="cfg-accomplice" min="1" max="5" value="1" class="w-16 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-center text-white focus:border-brand-blue outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-2 select-none">
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-witness-guard" class="rounded bg-gray-900 border-gray-600"> <span>Bảo Vệ NC</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-technician" class="rounded bg-gray-900 border-gray-600"> <span>Kỹ Thuật Viên</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-consultant" class="rounded bg-gray-900 border-gray-600"> <span>Thám Tử Cố Vấn</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-psychologist" class="rounded bg-gray-900 border-gray-600"> <span>Nhà Tâm Lý</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-victim-family" class="rounded bg-gray-900 border-gray-600"> <span>Thân Nhân</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-inside-man" class="rounded bg-gray-900 border-gray-600"> <span>Tay Trong</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-smart-accomplice" class="rounded bg-gray-900 border-gray-600"> <span>TP Thông Minh</span></label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition"><input type="checkbox" id="cfg-scapegoat" class="rounded bg-gray-900 border-gray-600"> <span>Kẻ Thế Mạng</span></label>
+                                
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-1 rounded transition bg-brand-blue/20 border border-brand-blue/30 col-span-2 justify-center mt-2">
+                                    <input type="checkbox" id="cfg-voice-chat" class="rounded bg-gray-900 border-gray-600" checked> 
+                                    <span class="text-brand-blue font-bold uppercase text-xs">🎙️ Bật Voice Chat</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 border-t border-gray-700 pt-4">
+                            <button onclick="startGame()" id="start-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed hidden">
+                                BẮT ĐẦU GAME
+                            </button>
+                            <p id="host-msg" class="text-center text-xs text-red-400 mt-2 hidden">Cần tối thiểu 6 người chơi!</p>
+                        </div>
+                    </div>
+
+                    <div id="lobby-chat-panel" class="hidden flex-1 bg-gray-800 rounded-xl border border-gray-700 flex flex-col overflow-hidden shadow-lg">
+                        <div class="p-3 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
+                            <h3 class="text-gray-400 font-bold uppercase text-xs tracking-wider flex items-center gap-2">💬 Kênh Chat</h3>
+                        </div>
+                        <div id="chat-messages" class="chat-scroll flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-gray-900/30 flex flex-col min-h-[200px] max-h-[360px]">
+                            <div class="text-center text-gray-600 text-xs italic">Hãy gửi lời chào đến mọi người! 👋</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 border-t border-gray-700 flex gap-2 items-center relative">
+                            <button onclick="toggleEmojiPicker()" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded font-bold text-lg">😀</button>
+                            <div id="emoji-picker" class="hidden absolute bottom-14 left-3 bg-gray-900 border border-gray-700 rounded-lg p-2 grid grid-cols-6 gap-1 text-xl shadow-xl z-50">
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('😀')">😀</button>
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('😂')">😂</button>
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('👍')">👍</button>
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('🤔')">🤔</button>
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('🔥')">🔥</button>
+                                <button class="hover:bg-gray-700 rounded" onclick="addEmoji('❤️')">❤️</button>
+                            </div>
+                            <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." autocomplete="off" class="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-brand-blue outline-none" onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                            <button onclick="sendChatMessage()" class="bg-brand-blue hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">➤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="game-screen" class="hidden px-3 sm:px-0">
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex-1 text-center relative overflow-hidden group min-h-[100px] flex items-center justify-center w-full">
+                    <div id="my-role-overlay" class="absolute inset-0 bg-gray-900 flex items-center justify-center z-10 cursor-pointer transition-opacity hover:opacity-10" onclick="toggleRoleReveal()">
+                        <span class="text-xs text-gray-500 uppercase tracking-widest animate-pulse">Giữ để xem vai trò</span>
+                    </div>
+                    <div id="my-role-info" class="w-full">Loading...</div>
+                </div>
+
+                <div class="flex flex-col gap-2 justify-center min-w-[150px]">
+                    <div id="voice-controls" class="hidden fixed top-24 right-4 z-40 bg-gray-900/90 border border-brand-blue p-2 rounded-lg shadow-xl flex flex-col gap-2 items-center backdrop-blur w-14 transition-all duration-300">
+                        <div class="text-[8px] text-brand-blue font-bold uppercase tracking-wider mb-1 text-center">Voice</div>
+                        
+                        <button id="btn-power" onclick="toggleVoiceConnection()" class="w-10 h-10 rounded-full bg-green-600 hover:bg-green-500 text-white flex items-center justify-center transition shadow-lg border border-gray-500 text-lg" title="Tham gia Voice Chat">
+                            📞
+                        </button>
+                    
+                        <div id="voice-actions" class="flex flex-col gap-2 hidden">
+                            <button id="btn-mic" onclick="toggleMic()" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition shadow-lg border border-gray-500 text-lg" title="Bật/Tắt Mic">
+                                🚫
+                            </button>
+                            <button id="btn-deafen" onclick="toggleDeafen()" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition shadow-lg border border-gray-500 text-lg" title="Nghe/Tắt tiếng">
+                                🔊
+                            </button>
+                            <div id="speaking-indicator" class="w-3 h-3 rounded-full bg-gray-800 border border-gray-600 mt-1 mx-auto transition-all duration-100" title="Trạng thái nói"></div>
+                        </div>
+                    </div>
+
+                    <button id="btn-solve" onclick="openSolveModal()" class="bg-brand-blue/20 border border-brand-blue text-brand-blue px-4 py-2 rounded hover:bg-brand-blue hover:text-white transition text-sm font-bold opacity-50 cursor-not-allowed">
+                        👮 PHÁ ÁN
+                    </button>
+                </div>
+            </div>
+
+            <div id="forensic-board" class="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-8 hidden">
+                <h3 class="text-gray-400 text-sm font-bold uppercase mb-3 border-b border-gray-700 pb-1">Hồ sơ vụ án</h3>
+                <div id="forensic-tiles" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2"></div>
+            </div>
+
+            <div id="game-board" class="max-w-6xl mx-auto w-full space-y-4"></div>
+        </section>
+    </main>
+
+    <div id="action-bar" class="fixed bottom-0 left-0 w-full bg-gray-900 border-t border-brand-red p-4 transform translate-y-full transition-transform duration-300 z-50 shadow-2xl">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+            <div id="action-text" class="text-white font-bold text-lg text-center md:text-left">...</div>
+            <div class="flex gap-2 justify-center">
+                <div id="action-controls" class="flex gap-2 justify-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 rounded-xl max-w-lg w-full p-6 border border-gray-600 shadow-2xl">
+            <h3 id="modal-title" class="text-xl font-bold mb-4 text-white border-b border-gray-700 pb-2">Tiêu đề</h3>
+            <div id="modal-content" class="mb-6 max-h-[60vh] overflow-y-auto custom-scrollbar"></div>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition">Huỷ</button>
+                <button id="modal-confirm-btn" class="bg-brand-red hover:bg-red-600 px-6 py-2 rounded font-bold text-white transition shadow-lg">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
