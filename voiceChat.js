@@ -118,20 +118,18 @@ window.toggleVoiceConnection = async () => {
 export async function initVoiceChat(roomId, uid) {
     if (!checkAgora()) return;
     
-    // Lưu thông tin để dùng cho việc Reconnect sau này
     currentRoomId = roomId;
     currentUid = uid;
 
-    // Hiển thị khung Voice Control (chỉ trong game)
     const controlPanel = document.getElementById('voice-controls');
     if (controlPanel) controlPanel.classList.remove('hidden');
 
-    // Nếu đã kết nối rồi thì thôi
     if (client && client.connectionState === 'CONNECTED') return;
 
     try {
         client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
+        // Lắng nghe sự kiện người khác bật/tắt mic hoặc tham gia
         client.on("user-published", async (user, mediaType) => {
             await client.subscribe(user, mediaType);
             if (mediaType === "audio") {
@@ -140,25 +138,33 @@ export async function initVoiceChat(roomId, uid) {
             }
         });
 
-        client.on("user-unpublished", (user) => { /* Xử lý khi ai đó tắt mic nếu cần */ });
+        client.on("user-unpublished", (user) => { 
+            // Xử lý khi ai đó thoát hoặc tắt mic (tùy chọn)
+        });
 
+        // 1. JOIN PHÒNG
+        // Lưu ý: Nếu project Agora của bạn để chế độ "Secure" (có App Certificate), 
+        // bạn cần Token server. Nếu đang test, hãy đảm bảo Project setting là "App ID only".
         await client.join(APP_ID, roomId, null, uid);
         window.hasJoinedVoice = true;
 
-        // Tạo track Mic nhưng SET FALSE NGAY LẬP TỨC (Mute mặc định)
+        // 2. TẠO MIC TRACK (Mặc định nó sẽ Enable = true)
         localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        
+        // 3. PUBLISH NGAY (Lúc này mic đang BẬT, publish mới thành công)
+        await client.publish([localAudioTrack]);
+
+        // 4. MUTE NGAY LẬP TỨC (Để đảm bảo vào game là im lặng)
+        // Sau khi publish thành công thì mới được phép setEnabled(false)
         isMicOn = false; 
         await localAudioTrack.setEnabled(false);
-        
-        await client.publish([localAudioTrack]);
 
         console.log("Voice Chat: Connected (Muted default)");
 
-        // Cập nhật UI: Hiện các nút Mic/Loa
+        // Cập nhật UI
         const actionsDiv = document.getElementById('voice-actions');
         if (actionsDiv) actionsDiv.classList.remove('hidden');
 
-        // Cập nhật trạng thái nút
         updateMicUI(false); 
         updateDeafenUI(false);
         startVolumeIndicator();
@@ -166,37 +172,23 @@ export async function initVoiceChat(roomId, uid) {
     } catch (error) {
         console.error("Lỗi kết nối Voice Chi Tiết:", error);
         
-        // Phân tích lỗi cụ thể
         let errorMsg = "Lỗi kết nối Voice Chat!\n\n";
         
+        // ... (Giữ nguyên phần xử lý lỗi hiển thị alert của bạn ở dưới) ...
         if (error.code === 'PERMISSION_DENIED' || error.name === 'NotAllowedError') {
-            errorMsg += "❌ Bạn chưa cấp quyền truy cập Microphone.\n\n";
-            errorMsg += "Hãy:\n";
-            errorMsg += "1. Bấm vào icon 🔒 hoặc ⓘ trên thanh địa chỉ\n";
-            errorMsg += "2. Cho phép truy cập Microphone\n";
-            errorMsg += "3. Tải lại trang";
-        } else if (error.code === 'NOT_READABLE' || error.name === 'NotReadableError') {
-            errorMsg += "⚠️ Microphone đang bị chiếm dụng bởi ứng dụng khác!\n\n";
-            errorMsg += "Hãy:\n";
-            errorMsg += "1. Đóng các ứng dụng khác đang dùng mic (Zoom, Teams, Discord...)\n";
-            errorMsg += "2. Hoặc đóng các tab Chrome khác đang dùng mic\n";
-            errorMsg += "3. Thử lại";
-        } else if (error.code === 'NOT_FOUND' || error.name === 'NotFoundError') {
-            errorMsg += "🎤 Không tìm thấy Microphone!\n\n";
-            errorMsg += "Hãy kiểm tra:\n";
-            errorMsg += "1. Microphone đã được kết nối chưa?\n";
-            errorMsg += "2. Driver microphone đã cài đặt chưa?";
-        } else {
-            errorMsg += `Lỗi: ${error.message || error.code || 'Không xác định'}\n\n`;
-            errorMsg += "Hãy thử:\n";
-            errorMsg += "1. Tải lại trang\n";
-            errorMsg += "2. Kiểm tra kết nối Internet\n";
-            errorMsg += "3. Kiểm tra Microphone";
+             errorMsg += "❌ Bạn chưa cấp quyền truy cập Microphone...";
+        } 
+        // Thêm xử lý cho lỗi UID invalid nếu có
+        else if (error.code === 'INVALID_UID') {
+            errorMsg += "❌ ID người dùng không hợp lệ.";
         }
-        
+        else {
+             errorMsg += `Lỗi: ${error.message || error.code || 'Không xác định'}`;
+        }
+
         alert(errorMsg);
-        
-        // Reset nút nguồn về trạng thái chưa kết nối nếu lỗi
+
+        // Reset nút nguồn
         const powerBtn = document.getElementById('btn-power');
         if(powerBtn) {
             powerBtn.innerHTML = '📞';
@@ -204,7 +196,7 @@ export async function initVoiceChat(roomId, uid) {
             powerBtn.classList.remove('bg-red-600');
         }
         
-        // Cleanup nếu có
+        // Cleanup
         if (client) {
             await client.leave().catch(() => {});
             client = null;
